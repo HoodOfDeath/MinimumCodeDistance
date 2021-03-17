@@ -1,47 +1,38 @@
 //  Declarations of matrix and vectors classes
-#pragma once
-#include <list>
-
-using namespace std;
-
-#ifndef MATRIX_H
-#define MATRIX_H
-
-
-
-class simpleMatrix {
+class Matrix
+{
 public:
 
 	//  default constructur
-	simpleMatrix();
+	Matrix();
 
 	//  overload constructur
-	simpleMatrix(short, short);
+	Matrix(short, short);
 
-	~simpleMatrix();
+	~Matrix();
 
 	//  set quantity of columns and lines
-	void setDimensions(short, short);
+	void SetDimensions(short, short);
 
-	void setCodeDistance(short);
+	void SetCodeDistance(short);
 
-	void setCoordinate(__int8, short, short);
+	void SetCoordinate(__int8, short, short);
 
-	short getColumns() const;
+	short GetColumns() const;
 
-	short getLines() const;
+	short GetLines() const;
 
-	__int8& getCoordinate(short , short) const;
+	__int8& GetCoordinate(short, short) const;
 
-	short getCodeDistance() const;
+	short GetCodeDistance() const;
 
-	void getCheckMatrix() const;
+	void GetCheckMatrix() const;
 
-	short minCodeDistance(int &) const;
+	short MinCodeDistance(int&) const;
 
-	bool LinearIndependence(short &, int &) const;
+	bool LinearIndependence(short&, int&) const;
 
-	bool independence_chech() const;
+	bool IndependenceChech() const;
 
 private:
 
@@ -50,7 +41,3 @@ private:
 	short newColumns, newLines, CodeDistance;
 
 };
-
-
-
-#endif
