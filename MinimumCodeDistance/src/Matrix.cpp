@@ -1,336 +1,226 @@
 //  Defenitions of matrix and vectors classes
+#pragma once
 #include "pch.h"
 #include "Matrix.h"
 
+bool CheckColumnsIndependency(unsigned __int16* columns, unsigned __int8 numberOfColumns);
 
-//  SIMPLE MATRIX CLASS
-Matrix::Matrix()
+unsigned __int8 CheckColumnsCombinationsIndependency(unsigned __int16* columns, unsigned __int8 numberOfColumns, unsigned __int8 numberOfRows);
+
+Matrix::Matrix() : _columns(0), _rows(0), _codeDistance(0), _matrix(nullptr)
 {
-	newColumns = 0;
-	newLines = 0;
-	CodeDistance = 0;
 }
 
-Matrix::Matrix(short columns, short lines)
+Matrix::Matrix(unsigned __int8 columns, unsigned __int8 rows) : _columns(columns), _rows(rows), _codeDistance(0)
 {
-	newColumns = columns;
-	newLines = lines;
-	CodeDistance = 0;
-
-	__int8** a = new __int8* [columns];
-
-	for (short i = 0; i < columns; i++)
+	if (_columns > 16)
 	{
-		a[i] = new __int8[lines];
+		throw std::invalid_argument("The number of columns should be less than 16");
 	}
 
-	for (int i = 0; i < columns; i++)
+	if (_rows >= _columns)
 	{
-		for (int j = 0; j < lines; j++)
-		{
-			a[i][j] = 0;
-		}
+		throw std::invalid_argument("The number of lines be less columns");
 	}
-
-	newMatrix = a;
+	_matrix = new unsigned __int16[rows];
 }
 
 Matrix::~Matrix()
 {
-	for (int i = 0; i < newColumns; i++)
-	{
-		delete[] newMatrix[i];
-	}
-
-	delete[] newMatrix;
-
+	delete[] _matrix;
 }
 
-
-void Matrix::SetDimensions(short columns, short lines)
+void Matrix::SetDimensions(unsigned __int8 columns, unsigned __int8 rows)
 {
-	newColumns = columns;
-	newLines = lines;
+	_columns = columns;
+	_rows = rows;
 
-	__int8** a = new __int8* [columns];
-
-	for (short i = 0; i < columns; i++)
+	if (_columns > 16)
 	{
-		a[i] = new __int8[lines];
+		throw std::invalid_argument("The number of columns should be less than 16");
 	}
 
-	for (int i = 0; i < columns; i++)
+	if (_rows >= _columns)
 	{
-		for (int j = 0; j < lines; j++)
+		throw std::invalid_argument("The number of lines be less columns");
+	}
+
+	delete[] _matrix;
+
+	_matrix = new unsigned __int16[rows];
+}
+
+void Matrix::CalculateMinCodeDistance()
+{
+	if (_rows == 0 || _columns == 0)
+	{
+		throw std::exception("Can't calculate minimum code distance. Matrix have yet been initialized.");
+	}
+	unsigned __int16* checkMatrix = new unsigned __int16[_columns];
+
+	unsigned __int8 pSubmatrixColumns = _columns - _rows;
+
+#pragma warning(disable:6386)
+	for (int i = 0; i < _rows; ++i)//take rows from p submatrix
+	{
+		unsigned __int16 tempColumn = (1 << pSubmatrixColumns);
+		--tempColumn;
+
+		tempColumn = tempColumn & _matrix[i];
+
+		if (tempColumn == 0)
 		{
-			a[i][j] = 0;
+			_codeDistance = 1;
+			delete[] checkMatrix;
+			return;
 		}
+
+		checkMatrix[i] = tempColumn;
 	}
 
-	newMatrix = a;
-}
-
-
-void Matrix::SetCodeDistance(short codeDistance)
-{
-	CodeDistance = codeDistance;
-}
-
-
-void Matrix::SetCoordinate(__int8 coordinate, short column, short line)
-{
-	newMatrix[column][line] = coordinate;
-}
-
-short Matrix::GetColumns() const
-{
-	return newColumns;
-}
-
-short Matrix::GetLines() const
-{
-	return newLines;
-}
-
-__int8& Matrix::GetCoordinate(short  column, short  line) const
-{
-	return newMatrix[column][line];
-}
-
-short Matrix::GetCodeDistance() const
-{
-	return  CodeDistance;
-}
-
-void Matrix::GetCheckMatrix() const
-{
-	Matrix checkMatrix(newColumns, (newColumns - newLines));
-
-	for (short column = newLines; column < newColumns; column++)
+	for (int i = 0; i < pSubmatrixColumns; ++i)//creating identity submatrix
 	{
-		for (short line = 0; line < newLines; line++)
-		{
-			checkMatrix.newMatrix[line][column - newLines] = newMatrix[column][line];
-		}
+		checkMatrix[_rows + i] = (1 << i);
+	}
+#pragma warning(default:6386)
+
+	if (!::CheckColumnsIndependency(checkMatrix, _columns))
+	{
+		_codeDistance = 2;
+		delete[] checkMatrix;
+		return;
 	}
 
-	for (short column = newLines; column < newColumns; column++)
+	_codeDistance = CheckColumnsCombinationsIndependency(checkMatrix, _columns, _rows);
+	delete[] checkMatrix;
+}
+
+void Matrix::SetRow(unsigned __int16 value, unsigned __int8 rowIndex)
+{
+	_matrix[rowIndex] = value;
+}
+
+unsigned __int8 Matrix::GetColumnsCount() const
+{
+	return _columns;
+}
+
+unsigned __int8 Matrix::GetRowsCount() const
+{
+	return _rows;
+}
+
+unsigned __int8 Matrix::GetCodeDistance() const
+{
+	return _codeDistance;
+}
+
+unsigned __int8 Matrix::operator()(unsigned row, unsigned column) const
+{
+	++column;//increase column index to make bitshift one digit smaller, so it stops right before needed number
+	if (row >= _rows || column > _columns)
 	{
-		for (short line = 0; line < newLines; line++)
+		throw std::invalid_argument("The elment's index out of bounds.");
+	}
+
+	unsigned __int8 result = _matrix[row];
+	result = result >> (_columns - column);
+	return result & 1;
+}
+
+unsigned __int16 Matrix::GetRow(unsigned __int8 rowIndex) const
+{
+	if (rowIndex >= _rows)
+	{
+		throw std::invalid_argument("The elment's index out of bounds.");
+	}
+
+	return _matrix[rowIndex];
+}
+
+std::ostream& operator<<(std::ostream& dest, const Matrix& matrix)
+{
+	const unsigned __int8 numberOfRows = matrix.GetRowsCount();
+	const unsigned __int8 numberOfColumns = matrix.GetColumnsCount();
+
+	for (unsigned __int8 i = 0; i < numberOfRows; ++i)
+	{
+		for (unsigned __int8 j = 0; j < numberOfColumns; ++j)
 		{
-			if (line == (column - newLines))
+			if (matrix(i, j))
 			{
-				checkMatrix.newMatrix[line][column] = 1;
+				dest << '1';
 			}
 			else
 			{
-				checkMatrix.newMatrix[line][column] = 0;
+				dest << '0';
 			}
 		}
+		dest << '\n';
 	}
 
+	return dest;
 }
 
-short Matrix::MinCodeDistance(int& checked) const
+bool CheckColumnsIndependency(unsigned __int16* columns, unsigned __int8 numberOfColumns)
 {
-	for (short ColumnQuantity = (newColumns - newLines); ColumnQuantity > 0; ColumnQuantity--)
-	{  //здесь загоняем проверку по ColumnQuantity столбцов с помощью метода класса
-		if (LinearIndependence(ColumnQuantity, checked))
-		{
-			return ColumnQuantity + 1;
-		}
-	}
-	return 1;
-}
-
-bool Matrix::LinearIndependence(short& ColumnQuantity, int& checked) const
-{
-	//  preparing columns to be pushed into new matrix
-	int* c = new int[newColumns];
-	int i, n = ColumnQuantity, m = newColumns - 1;
-
-	//  making check matrix
-	Matrix checkMatrix(newColumns, (newColumns - newLines));
-
-	for (short column = newLines; column < newColumns; column++)
+	for (unsigned __int8 i = 0; i < numberOfColumns - 1; ++i)
 	{
-		for (short line = 0; line < newLines; line++)
+		for (unsigned __int8 j = i + 1; j < numberOfColumns; ++j)
 		{
-			checkMatrix.newMatrix[line][column - newLines] = newMatrix[column][line];
-		}
-	}
-
-	for (short column = newLines; column < newColumns; column++)
-	{
-		for (short line = 0; line < (newColumns - newLines); line++)
-		{
-			if (line == (column - newLines))
+			if (columns[i] == columns[j])
 			{
-				checkMatrix.newMatrix[column][line] = 1;
+				return false;
 			}
-			else
-			{
-				checkMatrix.newMatrix[column][line] = 0;
-			}
-		}
-	}
-
-
-	Matrix bufferMatrix((newColumns - newLines), ColumnQuantity);
-
-	//  down below is process of making linear combinations of columns and following checking for their linear independence
-	for (i = 0; i < n; i++)
-	{
-		c[i] = n - i - 1;
-	}
-
-	while (1)
-	{
-		for (i = 0; i < n; i++)
-		{
-			for (short column = 0; column < (newColumns - newLines); column++)
-			{
-				bufferMatrix.newMatrix[column][i] = checkMatrix.newMatrix[c[i]][column];
-			}
-		}
-
-		if (bufferMatrix.IndependenceChech() == false)
-		{
-			checked++;
-			delete c;
-			return false;
-		}
-
-		checked++;
-		//  need to be checked/controled/examined
-
-		for (i = 0; c[i] >= m - i;)
-		{
-			if (++i >= n)
-			{
-				delete c;
-				return 1;
-			}
-		}
-		for (c[i]++; i; i--)
-		{
-			c[i - 1] = c[i] + 1;
-		}
-	}
-}
-
-bool Matrix::IndependenceChech() const
-{
-
-	int mass[20][20] = { 0 };
-	short column, line;
-	bool columnSate[20] = { 0 };
-
-	for (column = 0; column < newColumns; column++)
-	{
-		for (line = 0; line < newLines; line++)
-		{
-			mass[column][line] = newMatrix[column][line];
-		}
-	}
-
-	for (column = 0; column < newColumns; column++)
-	{
-		for (line = 0; line < newLines; line++)
-		{
-			if (columnSate[line])
-			{
-				continue;
-			}
-
-			if (mass[column][line] == 0)
-			{
-				for (short i = line + 1; i < newLines; i++)
-				{
-					if (mass[column][i] != 0)
-					{
-						// summ vectors
-						for (short j = 0; j < newColumns; j++)
-						{
-							mass[j][line] = (mass[j][line] + mass[j][i]) % 2;
-						}
-
-
-						//  !!! change all line without 0 in curren editing column (start 1: case of first checked line got 0 in current column)
-						for (short k = i; k < newLines; k++)
-						{
-							if (mass[column][k] != 0)
-							{
-								for (short z = 0; z < newColumns; z++)
-								{
-									mass[z][k] = (mass[z][line] + mass[z][k]) % 2;
-								}
-							}
-						}
-						//  !!! (end of 1)						
-
-						columnSate[line] = true;
-					}
-
-					if (columnSate[line])
-					{
-						break;
-					}
-				}
-			}
-			else
-			{
-				columnSate[line] = true;
-				//  !!! change all line without 0 in curren editing column (start 2: case of first checked line got 1 in current column)
-				for (short k = line + 1; k < newLines; k++)
-				{
-					if (mass[column][k] != 0)
-					{
-						for (short z = 0; z < newColumns; z++)
-						{
-							mass[z][k] = (mass[z][line] + mass[z][k]) % 2;// проверить как тут всё 
-						}
-					}
-				}
-																		  //  !!! (end of 2)	
-			}
-
-			if (columnSate[column])
-			{
-				break;
-			}
-		}
-
-		//  !!! change all line without 0 in curren editing column (start 3: in case of non cube matrix) 
-		if (column > newLines)
-		{
-			for (short i = newLines; i > 0; i--)
-			{
-				if (mass[column][i] != 0)
-				{
-					for (short k = i - 1; k >= 0; k--)
-					{
-						if (mass[column][k] != 0)
-						{
-							for (short z = 0; z < newColumns; z++)
-							{
-								mass[z][k] = (mass[z][i] + mass[z][k]) % 2;
-							}
-						}
-					}
-				}
-			}
-		}//  !!! (end of 3)	
-
-	}
-	// there should be incapsulated cycles which is checking array for linear independence
-	for (short i = 0; i < newLines; i++)
-	{
-		if (columnSate[i] == false)
-		{
-			return false;
 		}
 	}
 
 	return true;
+}
+
+unsigned __int8 CheckColumnsCombinationsIndependency(unsigned __int16* columns, unsigned __int8 numberOfColumns, unsigned __int8 numberOfRows)
+{
+	int c[64];
+	int i;
+
+	unsigned __int8 upperBound = numberOfColumns - numberOfRows;
+
+	for (unsigned __int8 columnsToSumm = 3; columnsToSumm < upperBound; columnsToSumm++)
+	{
+		for (i = 0; i < columnsToSumm; i++)// putting least column at last position (like [3,2,1])
+		{
+			c[i] = columnsToSumm - i;
+		}
+
+		while (1)
+		{
+			unsigned __int16 summ = 0;
+
+			for (i = 0; i < columnsToSumm; i++)
+			{
+				summ = summ ^ columns[c[i] - 1];
+			}
+
+			if (summ == 0)
+			{
+				return columnsToSumm;
+			}
+
+			for (i = 0; c[i] >= numberOfColumns - i;)
+			{
+				if (++i >= columnsToSumm)//	if index is bigger than number of summing columns
+				{
+					goto m1; //  go to next iteration of cycle (increase number of summing columns)
+				}
+			}
+
+			for (c[i]++; i; i--)
+			{
+				c[i - 1] = c[i] + 1;
+			}
+		}
+	m1: continue;
+	}
+
+	return upperBound;
 }

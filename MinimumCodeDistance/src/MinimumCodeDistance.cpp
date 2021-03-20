@@ -1,7 +1,8 @@
 // MinimumCodeDistance.cpp : This file contains the 'main' function. Program execution begins and ends there.
-
+#pragma once
 #include "pch.h"
 #include "Matrix.h"
+#include <chrono>
 
 int Factorial(int value)
 {
@@ -17,90 +18,37 @@ int Factorial(int value)
 		result *= value;
 		--value;
 	}
-	
+
 	return result;
 }
 
 int main()
 {
-	const int one = 1;
-	const int zero = 0;
-
 	int codeDistance[10] = { 0 };
 	int checked = 0;
 	short lines, columns;
 	short maxCodeDistance = 1;
-	std::string str;
 
 	std::cout << "Enter code parameters (n k): ";
 	std::cin >> columns >> lines;
 
-	int vectorsQuantity = 0; //  quantity of unique vectors size of "lines"
+	short pSubmatrixColumns(columns - lines);
 
-	for (short i = 1; i <= lines; i++)
+	auto start = std::chrono::high_resolution_clock::now();
+
+	int vectorsQuantity = (1 << pSubmatrixColumns); //  quantity of unique vectors size of "lines". Equals to (2 power "lines") - 1
+	vectorsQuantity--;
+
+	unsigned __int8* vectorArray = new unsigned __int8 [vectorsQuantity];
+
+	for (unsigned int i = 1; i <= vectorsQuantity; i++)
 	{
-		vectorsQuantity += (Factorial(lines)) / (Factorial(i) * Factorial(lines - i));
-	}
-
-	int** vectorArray = new int* [lines];
-
-	for (short i = 0; i < lines; i++)
-	{
-		vectorArray[i] = new int[vectorsQuantity];
-	}
-
-	for (short i = 0; i < lines; i++)
-	{
-		for (int j = 0; j < vectorsQuantity; j++)
-		{
-			vectorArray[i][j] = 0;
-		}
-	}
-	//  creating unique vectors
-
-	int startPos;
-	int endPos = 0;
-
-	for (short k = 1; k <= lines; k++)
-	{
-		startPos = endPos;
-		endPos += Factorial(lines) / (Factorial(k) * (Factorial(lines - k)));
-		for (short vect = startPos; vect < endPos; vect++)
-		{
-			int c[100];
-			int i;
-			for (i = 0; i < k; i++)//n = k
-				c[i] = k - i;
-
-			while (1)
-			{
-				for (i = 0; i < k; i++)
-				{
-					vectorArray[c[i] - 1][vect] = 1;
-				}
-
-				for (i = 0; c[i] >= lines - i;)// m = lines
-				{
-					if (++i >= k)
-					{
-						goto m1; //  some kind of "return"
-					}
-				}
-				for (c[i]++; i; i--)
-				{
-					c[i - 1] = c[i] + 1;
-				}
-
-				vect++;
-			}
-		}
-	m1: continue;
+		vectorArray[i - 1] = i;
 	}
 
 	unsigned __int64 matrixQuantity = 1;
 
-
-	for (int i = 0; i < columns - lines; i++)
+	for (int i = 0; i < lines; i++)
 	{
 		matrixQuantity *= vectorsQuantity;
 	}
@@ -113,71 +61,73 @@ int main()
 		matrixArray[i].SetDimensions(columns, lines);
 	}
 
-	int i, n, m;
-	int buffMatrix = 0;
-	int c[100];
+	unsigned __int16* identitySubmatrix = new unsigned __int16[lines];
 
-	short* columnsCombinations = new short[columns - lines]; // columnsCombinations[vectorsQuantity][matrixQuantity]
-	// there starts making P submatrix as combinations of precobined vectors
-
-
-	for (int i = 0; i <= (columns - lines); i++)
+	for (int i = 0; i < lines; ++i)
 	{
-		columnsCombinations[i] = 0;
+		identitySubmatrix[i] = (1 << (lines - i - 1));
 	}
 
-	for (int i = 0; i < matrixQuantity; i++)
+	short* linesCombinations = new short[lines]; // columnsCombinations[vectorsQuantity][matrixQuantity]
+	// there starts making P submatrix as combinations of precombined vectors
+
+	for (int i = 0; i < lines; i++)
 	{
-		for (int k = 0; k < (columns - lines); k++)
-		{
-			for (int f = 0; f < lines; f++)
-			{
-				matrixArray[i].SetCoordinate(vectorArray[f][columnsCombinations[k]], k + lines, f);
-			}
-
-		}
-
-		columnsCombinations[0]++;
-
-		for (int j = 0; columnsCombinations[j] >= vectorsQuantity;)
-		{
-			if (j < (columns - lines))
-			{
-				columnsCombinations[j] = 0;
-				j++;
-				columnsCombinations[j]++;
-			}
-		}
+		linesCombinations[i] = 0;
 	}
 
-
-	//  making E submatrix
-	for (int i = 0; i < matrixQuantity; i++)
+	for (int i = 0; i < matrixQuantity; i++)//this loot is iterate through all combinations of vectors
 	{
-		for (short line = 0; line < lines; line++)
+		for (int lineIndex = 0; lineIndex < lines; ++lineIndex)
 		{
-			for (short column = 0; column < lines; column++)
+			unsigned __int16 rowTemp = identitySubmatrix[lineIndex];
+			unsigned short lineVectorIndex = linesCombinations[lineIndex];
+			unsigned __int16 bitValue = vectorArray[lineVectorIndex];
+			rowTemp = ((rowTemp << pSubmatrixColumns) + bitValue);
+
+			matrixArray[i].SetRow(rowTemp, lineIndex);
+		}
+
+		if (linesCombinations[0] < vectorsQuantity - 1)
+		{
+			linesCombinations[0]++;
+		}
+		else
+		{
+			linesCombinations[0] = 0;
+			for (int pLines = 1; pLines < lines; ++pLines)
 			{
-				if (column == line)
+				if (linesCombinations[pLines] < vectorsQuantity - 1)
 				{
-					matrixArray[i].SetCoordinate(1, column, line);
+					linesCombinations[pLines]++;
+					break;
 				}
 				else
 				{
-					matrixArray[i].SetCoordinate(0, column, line);
+					linesCombinations[pLines] = 0;
 				}
 			}
 		}
+
+		matrixArray[i].CalculateMinCodeDistance();
 	}
-	// end of making matrix
 
-	//cout << "\n \n";
+	delete[] vectorArray;
 
+	delete[] identitySubmatrix;
 
-	for (int matrixCount = 0; matrixCount < matrixQuantity; matrixCount++)
+	delete[] linesCombinations;
+
+	auto end = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<float> duration = end - start;
+
+	std::cout << duration.count() << "s" << std::endl;
+
+	/*for (int i = 0; i < matrixQuantity; i++)
 	{
-		matrixArray[matrixCount].SetCodeDistance(matrixArray[matrixCount].MinCodeDistance(checked));
-	}
+		std::cout << matrixArray[i] << "\n\n";
+	}*/
 
 	for (int f = 0; f < matrixQuantity; f++)
 	{
@@ -187,6 +137,7 @@ int main()
 		}
 	}
 
+	std::cout << "Matrix quantity " << matrixQuantity << "\n";
 	std::cout << "Max code distance is " << maxCodeDistance << "\n";
 
 	for (int i = 0; i < matrixQuantity; i++)

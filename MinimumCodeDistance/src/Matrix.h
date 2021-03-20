@@ -7,37 +7,31 @@ public:
 	Matrix();
 
 	//  overload constructur
-	Matrix(short, short);
+	Matrix(unsigned __int8 columns, unsigned __int8 rows);
 
 	~Matrix();
 
-	//  set quantity of columns and lines
-	void SetDimensions(short, short);
+	void SetDimensions(unsigned __int8 columns, unsigned __int8 rows);
 
-	void SetCodeDistance(short);
+	void SetRow(unsigned __int16 value, unsigned __int8 rowIndex);
 
-	void SetCoordinate(__int8, short, short);
+	void CalculateMinCodeDistance();
 
-	short GetColumns() const;
+	unsigned __int16 GetRow(unsigned __int8 rowIndex) const;
 
-	short GetLines() const;
+	unsigned __int8 GetColumnsCount() const;
 
-	__int8& GetCoordinate(short, short) const;
+	unsigned __int8 GetRowsCount() const;
 
-	short GetCodeDistance() const;
+	unsigned __int8 GetCodeDistance() const;
 
-	void GetCheckMatrix() const;
-
-	short MinCodeDistance(int&) const;
-
-	bool LinearIndependence(short&, int&) const;
-
-	bool IndependenceChech() const;
+	unsigned __int8  operator()(unsigned row, unsigned column) const;
 
 private:
 
-	__int8** newMatrix;
+	unsigned __int8 _columns, _rows, _codeDistance;
 
-	short newColumns, newLines, CodeDistance;
-
+	unsigned __int16* _matrix;
 };
+
+std::ostream& operator<<(std::ostream& dest, const Matrix& matrix);
