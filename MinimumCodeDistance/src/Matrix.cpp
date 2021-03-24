@@ -1,4 +1,3 @@
-//  Defenitions of matrix and vectors classes
 #pragma once
 #include "pch.h"
 #include "Matrix.h"

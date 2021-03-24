@@ -2,9 +2,7 @@
 #pragma once
 #include "pch.h"
 #include "Matrix.h"
-#include <chrono>
-#include <vector>
-#include <future>
+#include "Register.h"
 
 unsigned __int16* _vectorArray;
 unsigned __int16* _identitySubmatrix;
@@ -18,16 +16,7 @@ void ConstructMatricesRange(const unsigned short lines, const unsigned short col
 	unsigned int vectorsQuantity = (1 << pSubmatrixColumns); //  quantity of unique vectors size of "pSubmatrixColumns". Equals to (2 power "pSubmatrixColumns") - 1
 	vectorsQuantity--;
 
-	std::vector<unsigned int> linesCombinations;
-	linesCombinations.reserve(lines);
-
-	unsigned int remainder = startIndex;
-
-	for (unsigned short i = 0; i < lines; ++i)
-	{
-		linesCombinations.push_back(remainder % vectorsQuantity);
-		remainder = remainder / vectorsQuantity;
-	}
+	Register linesCombinations(vectorsQuantity, lines, startIndex);
 
 	const unsigned int endIndex = startIndex + count;
 
@@ -48,26 +37,7 @@ void ConstructMatricesRange(const unsigned short lines, const unsigned short col
 
 		_matrixArray[i].CalculateMinCodeDistance();
 
-		if (linesCombinations[0] < vectorsQuantity - 1)
-		{
-			linesCombinations[0]++;
-		}
-		else
-		{
-			linesCombinations[0] = 0;
-			for (unsigned int pLines = 1; pLines < lines; ++pLines)
-			{
-				if (linesCombinations[pLines] < vectorsQuantity - 1)
-				{
-					linesCombinations[pLines]++;
-					break;
-				}
-				else
-				{
-					linesCombinations[pLines] = 0;
-				}
-			}
-		}
+		++linesCombinations;
 	}
 }
 
